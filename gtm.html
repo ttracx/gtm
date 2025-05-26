@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive GTM Plan: NeuralQuantum.ai & Tunaas.ai</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Visualization & Content Choices:
+        - Company Overviews: Text blocks (Inform).
+        - Target Audiences & UVPs: Interactive cards with hover/click effects to show details (Inform/Compare).
+        - Product Portfolios: Clickable list items/accordions to reveal descriptions (Organize/Inform).
+        - Launch Phases: HTML/CSS based horizontal timeline. Phases are clickable blocks that reveal detailed activities and KPIs (Change/Organize). Interaction: Click phase to see details. Justification: Visual flow of launch, interactive drill-down.
+        - Pricing Strategy: Interactive cards for Tunaas.ai tiers; table for NeuralQuantum.ai (Compare/Inform). Interaction: Hover for emphasis. Justification: Clear feature/price breakdown.
+        - Strategy Ecosystem (Distribution, Partnerships, Marketing, Support): Tabbed content or categorized lists within a dedicated section (Organize/Compare).
+        - Metrics & KPIs: Categorized lists and an illustrative Bar Chart (Chart.js) for "Sample KPI Progress" (Inform/Illustrate). Interaction: Tooltips on bars. Justification: Show data viz capability.
+        - All interactions via vanilla JS. No SVG/Mermaid. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .sidebar-link {
+            transition: all 0.3s ease;
+        }
+        .sidebar-link.active, .sidebar-link:hover {
+            background-color: #0D9488; /* teal-600 */
+            color: white;
+        }
+        .company-btn.active {
+            background-color: #0D9488; /* teal-600 */
+            color: white;
+            border-color: #0D9488;
+        }
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        .launch-phase {
+            cursor: pointer;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .launch-phase:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .launch-phase.active-phase {
+            border-color: #0D9488; /* teal-600 */
+            border-width: 2px;
+        }
+        .details-card {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-out;
+        }
+        .details-card.open {
+            max-height: 1500px; /* Adjust as needed */
+        }
+        .product-item:hover {
+            background-color: #f0f9ff; /* light blue for hover */
+        }
+        .pricing-card {
+            transition: all 0.3s ease;
+        }
+        .pricing-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 700px; /* Example max-width */
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px; /* Base height */
+            max-height: 400px; /* Max height */
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px; /* Taller on md screens and up */
+            }
+        }
+        /* For long labels in Chart.js tooltips */
+        .chartjs-tooltip {
+            opacity: 1;
+            pointer-events: none;
+            position: absolute;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border-radius: 3px;
+            -webkit-transition: all .1s ease;
+            transition: all .1s ease;
+            padding: 6px;
+            font-size: 12px;
+            white-space: normal; /* Allow text wrapping */
+            max-width: 250px; /* Max width for tooltip */
+        }
+        .table-cell-truncate {
+            max-width: 200px;
+            white-space: normal;
+            word-break: break-word;
+        }
+    </style>
+</head>
+<body class="bg-stone-100 text-stone-800">
+    <header class="bg-white shadow-md py-4 sticky top-0 z-50">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center">
+            <h1 class="text-2xl sm:text-3xl font-bold text-teal-700 mb-2 sm:mb-0">Interactive GTM Strategy</h1>
+            <div id="companySwitcher" class="flex space-x-2">
+                <button data-company="nqai" class="company-btn px-4 py-2 rounded-md border border-stone-300 hover:bg-teal-500 hover:text-white transition active">NeuralQuantum.ai</button>
+                <button data-company="tunaas" class="company-btn px-4 py-2 rounded-md border border-stone-300 hover:bg-teal-500 hover:text-white transition">Tunaas.ai</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row">
+        <aside class="w-full md:w-1/4 lg:w-1/5 pr-0 md:pr-8 mb-8 md:mb-0">
+            <nav id="sidebarNav" class="bg-white p-4 rounded-lg shadow">
+                <h2 class="text-xl font-semibold text-teal-700 mb-4">Navigation</h2>
+                <ul class="space-y-2">
+                    <li><a href="#" data-section="overview" class="sidebar-link block px-3 py-2 rounded-md active">Overview</a></li>
+                    <li><a href="#" data-section="audience" class="sidebar-link block px-3 py-2 rounded-md">Audience & Value</a></li>
+                    <li><a href="#" data-section="products" class="sidebar-link block px-3 py-2 rounded-md">Product Portfolio</a></li>
+                    <li><a href="#" data-section="launch" class="sidebar-link block px-3 py-2 rounded-md">Launch Plan</a></li>
+                    <li><a href="#" data-section="pricing" class="sidebar-link block px-3 py-2 rounded-md">Pricing Strategy</a></li>
+                    <li><a href="#" data-section="strategy" class="sidebar-link block px-3 py-2 rounded-md">Strategy Ecosystem</a></li>
+                    <li><a href="#" data-section="metrics" class="sidebar-link block px-3 py-2 rounded-md">Metrics & KPIs</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main id="mainContent" class="w-full md:w-3/4 lg:w-4/5">
+            </main>
+    </div>
+
+    <footer class="bg-white border-t border-stone-200 mt-12 py-6 text-center">
+        <p class="text-sm text-stone-600">&copy; 2025 NeuralQuantum.ai. All information based on the provided report.</p>
+    </footer>
+
+    <script>
+        const data = {
+            nqai: {
+                name: "NeuralQuantum.ai",
+                overview: {
+                    title: "NeuralQuantum.ai: The Future of Intelligence",
+                    intro: "This section provides an overview of NeuralQuantum.ai, its vision, and mission in pioneering the synergy of Quantum Computing and Artificial Intelligence. Explore how NeuralQuantum.ai aims to unlock unprecedented computational power and AI capabilities.",
+                    tagline: "Pioneering the synergy of Quantum Computing and Artificial Intelligence.",
+                    vision: "To unlock unprecedented computational power and AI capabilities by integrating quantum mechanics with neural networks, driving innovation in complex problem-solving and next-generation AI.",
+                    mission: "To provide researchers, developers, and enterprises with the foundational infrastructure, advanced R&D, and consumer-ready solutions for the quantum-AI era, focusing on agentic reasoning, edge inference, and neurosymbolic models."
+                },
+                audience: {
+                    title: "Target Audience & Value Propositions for NeuralQuantum.ai",
+                    intro: "NeuralQuantum.ai targets a diverse set of stakeholders at the forefront of AI and quantum research. This section details each segment, their specific needs, and the unique value NeuralQuantum.ai offers to them. Click on each segment to understand their motivations and our tailored solutions.",
+                    segments: [
+                        { name: "AI/ML Researchers & Academia", needs: "Access to cutting-edge tools, novel architectures, solving grand challenge problems.", value: "Breakthrough R&D platforms, quantum-enhanced algorithms, and unique datasets (e.g., DNA-native LLM)." },
+                        { name: "Edge Device Manufacturers (e.g., Apple, Qualcomm, NVIDIA)", needs: "Power-efficient, high-performance AI on-device; next-gen chip capabilities.", value: "Optimized quantum-AI models for edge inference, SDKs for hardware integration, vision for future chip architectures." },
+                        { name: "Developers & Enterprises in Deep Tech Sectors (Biotech, Finance, Defense, Advanced Materials)", needs: "Solving intractable problems, gaining competitive advantage, secure & robust AI.", value: "Quantum-AI SDKs & APIs (Q-Agents) for specialized tasks, enhanced simulation, optimization, and discovery." },
+                        { name: "Quantum Computing Labs & Hubs", needs: "Collaborating on foundational research, validating quantum hardware with AI applications.", value: "A platform for applied quantum AI research, tools for benchmarking, and potential for joint IP development." }
+                    ],
+                    uvp: {
+                        title: "Unique Value Propositions (UVPs)",
+                        points: [
+                            "Quantum-Accelerated AI: The only platform architected from the ground up to fuse quantum computing's potential with AI, offering demonstrable advantages in complex modeling and agentic reasoning.",
+                            "Biologically-Inspired Intelligence: Groundbreaking work in DNA-native LLMs and neurosymbolic models that mimic biological systems, unlocking new frontiers in genomics, neuroscience, and personalized medicine.",
+                            "Future-Proof Edge Capabilities: A clear roadmap from current on-device AI optimization to next-generation quantum-enhanced edge chips and brainwave interfaces, ensuring partners are at the forefront of innovation."
+                        ]
+                    }
+                },
+                products: {
+                    title: "Product Portfolio of NeuralQuantum.ai",
+                    intro: "NeuralQuantum.ai offers a suite of advanced tools and platforms designed to accelerate research and development in the quantum-AI domain. Explore each product offering below to understand its capabilities and applications. Click on a product to learn more.",
+                    items: [
+                        { name: "Quantum-AI SDK & APIs (Q-Agents)", description: "Libraries and tools for building and deploying AI agents that leverage quantum principles for enhanced reasoning, optimization, and simulation." },
+                        { name: "Edge AI Models & Development Kits", description: "Highly optimized neurosymbolic and quantum-inspired models for deployment on edge devices, with a roadmap for specialized chips." },
+                        { name: "NeuroOps Stack (Brainwave Interfaces)", description: "Advanced R&D initiative for brain-computer interfaces, enabling novel interaction paradigms and cognitive augmentation (long-term)." },
+                        { name: "DNA-native LLM for Genomics", description: "A foundational model trained on genomic data, offering unprecedented capabilities for biological research, drug discovery, and personalized medicine (R&D focus, API access)." },
+                        { name: "Quantum Agent Workflows (via LangGraph & similar)", description: "Tools to design, implement, and manage complex, multi-step agentic processes incorporating quantum computational steps." }
+                    ]
+                },
+                launch: {
+                    title: "Phased Launch & Rollout Strategy for NeuralQuantum.ai",
+                    intro: "The launch of NeuralQuantum.ai is structured in three key phases, each with specific goals and activities. This timeline visualizes the progression from foundational work and early access to commercial launch and scaling. Click on each phase to see detailed activities and KPIs.",
+                    phases: [
+                        { name: "Phase 1: Foundation & Early Access (Months 0-2)", goal: "Validate core offerings, build initial community, gather critical feedback.", nq_activities: ["Finalize architecture and core features of Quantum-AI SDK (alpha).", "Launch an exclusive \"Quantum Pioneers Program\" for select researchers and labs (invite-only closed beta).", "Publish foundational whitepapers on Q-Agents and DNA-native LLM concepts.", "Develop and release initial HuggingFace Spaces demonstrating basic quantum-AI principles."], kpis: "Waitlist sign-ups, beta user engagement, feedback quality, initial researcher commitments." },
+                        { name: "Phase 2: Public Beta & Community Building (Months 2-5)", goal: "Expand user base, refine products based on feedback, secure early testimonials.", nq_activities: ["Publicly launch NeuralQuantum.ai SDKs (beta) with comprehensive documentation and tutorials.", "Deploy interactive HuggingFace Spaces for Q-Agent demos (e.g., \"Quantum Route Optimizer,\" \"Molecular Structure Predictor\").", "Host founder-led technical workshops and webinars for developers and researchers.", "Initiate collaborations with 2-3 university quantum labs."], kpis: "SDK downloads, active beta users, HuggingFace Space interactions, webinar attendance, testimonial acquisition." },
+                        { name: "Phase 3: Commercial Launch & Scaling (Months 5-12)", goal: "Drive revenue, expand market reach, establish strategic partnerships.", nq_activities: ["Introduce initial paid tiers for advanced features/support for Quantum-AI SDK.", "Launch API access for DNA-LLM (for approved research partners initially, then broader).", "Secure first B2B contracts or research grants for custom neural agent development or DNA/quantum LLM projects.", "Expand technical content: in-depth blog posts, GitHub repositories with example projects."], kpis: "MRR/ARR, paying customers, partnership agreements, marketplace growth, customer acquisition cost (CAC)." }
+                    ]
+                },
+                pricing: {
+                    title: "Pricing Strategy for NeuralQuantum.ai - Powering the Next AI Frontier",
+                    intro: "NeuralQuantum.ai offers flexible pricing models tailored to different user needs, from individual developers to large enterprises. This section outlines the various services and their associated pricing structures. Explore the options to find the best fit for your research or development goals.",
+                    tiers: [
+                        { service: "Quantum-AI SDK (Basic)", features: "Access to core libraries, documentation, community support.", model: "Free with API key registration", price: "$0" },
+                        { service: "Quantum-AI SDK (Pro)", features: "Advanced features, higher rate limits, dedicated technical support, early access to new models.", model: "Annual Subscription", price: "$499 /developer/year" },
+                        { service: "DNA-LLM Inference API", features: "Per-token access to the DNA-native LLM for research and analysis.", model: "Usage-based (Tokens)", price: "~$0.01 - $0.05 / 1K tokens" },
+                        { service: "Brainwave SDK (Research)", features: "Early access license for R&D purposes with NeuroOps stack components.", model: "Per License (Academic/Corp)", price: "$199 (Acad) / $999 (Corp)" },
+                        { service: "Neural Agents (Custom)", features: "Bespoke development and deployment of quantum-enhanced or specialized neural agents.", model: "Project-based / Retainer", price: "Starts at $10,000+ per project" },
+                        { service: "Edge AI Model Licensing", features: "Licensing for deploying optimized models on specific edge hardware.", model: "Per Unit / Royalty / Custom", price: "Custom Quote" }
+                    ]
+                },
+                strategy: {
+                    title: "Strategy Ecosystem for NeuralQuantum.ai",
+                    intro: "This section outlines the multi-faceted strategic approach for NeuralQuantum.ai, covering distribution, sales, partnerships, marketing, and customer support. Each component is designed to build a strong market presence and foster a thriving ecosystem around our quantum-AI technologies.",
+                    distributionSales: {
+                        title: "Distribution & Sales Strategy",
+                        channels: [
+                            { name: "Direct Sales & BD", strategy: "Target enterprise R&D, specialized government contracts, and high-value research collaborations. Focus on custom solutions." },
+                            { name: "Hugging Face", strategy: "Showcase cutting-edge models, host interactive demos (Spaces), publish research papers, build credibility with ML community." },
+                            { name: "Developer Platforms (GitHub, PyPI, NPM)", strategy: "Distribute SDKs, CLI tools, example code. Foster an open-source community around core technologies." },
+                            { name: "Cloud Marketplaces (AWS, Azure, GCP - Future)", strategy: "List specialized APIs (e.g., DNA LLM inference) and managed services for enterprise adoption." },
+                            { name: "Content & Community", strategy: "Publish research, technical blogs, host webinars/workshops for deep tech audience. Engage in academic conferences." },
+                            { name: "Influencer & Affiliates", strategy: "Collaborate with leading AI/Quantum researchers for endorsements or joint publications." }
+                        ]
+                    },
+                    partnerships: {
+                        title: "Strategic Partnerships Ecosystem",
+                        categories: [
+                            { name: "Academic & Research", examples: "MIT AI Lab, Stanford Quantum, TU Delft, Max Planck Institutes.", goals: "Joint research, talent pipeline, validation of NQ.ai tech, grant applications." },
+                            { name: "Hardware & Edge", examples: "Apple (Neural Engine), Qualcomm, NVIDIA (Jetson), Raspberry Pi Foundation, Google (TPU/Edge).", goals: "Optimize NQ.ai models for specific hardware, co-develop reference designs, early access to new chips." },
+                            { name: "Software & Platform", examples: "LangChain, LlamaIndex (for NQ.ai SDK frameworks); Hugging Face (distribution, community); OpenAI, Cohere, Anthropic (potential for model interplay); Azure, AWS, GCP (cloud deployment & scaling).", goals: "Expand reach, enhance functionality, streamline user experience." },
+                            { name: "Venture Capital & Incubators", examples: "Y Combinator, Alchemist Accelerator, specialized deep tech VCs.", goals: "Funding, mentorship, strategic network access." },
+                            { name: "Industry Consortia & Alliances", examples: "Quantum Economic Development Consortium (QED-C), AI research alliances.", goals: "Shape industry standards, collaborative projects, policy influence." }
+                        ]
+                    },
+                    marketing: {
+                        title: "Marketing & Communications Plan",
+                        channels: [
+                            { name: "LinkedIn", focus: "Thought leadership articles on Quantum AI, research breakthroughs, partnerships with academic institutions, high-level B2B outreach." },
+                            { name: "Twitter/X", focus: "Teasers for model releases (Q-Agents, DNA-LLM), live-tweeting from conferences, engaging with AI/Quantum thought leaders." },
+                            { name: "YouTube", focus: "Deep-dive technical explanations, webinar recordings, interviews with researchers, demos of complex NQ.ai capabilities." },
+                            { name: "Product Hunt", focus: "Launch specific developer tools or groundbreaking demo applications stemming from NQ.ai research." },
+                            { name: "Technical Blogs & Medium", focus: "In-depth articles: \"The Architecture of Quantum Agents,\" \"Neurosymbolic Models for Edge Devices,\" \"Ethical AI in the Quantum Era.\"" },
+                            { name: "Email Marketing", focus: "Research newsletters, SDK updates, invitations to technical webinars, early access programs for new NQ.ai features." },
+                            { name: "Academic Publishing & Conferences", focus: "Submit papers to top AI/Quantum journals (Nature, Science, NeurIPS, ICML), present at conferences." },
+                            { name: "Public Relations", focus: "Target tech journals (Wired, MIT Tech Review), and specialized press for major breakthroughs or funding rounds." }
+                        ]
+                    },
+                    support: {
+                        title: "Customer Support & Success Strategy",
+                        points: [
+                            "Tiered Support: Community forums (GitHub Discussions), dedicated support for Pro SDK/Enterprise.",
+                            "Documentation & Knowledge Base: Comprehensive, well-organized, and easily searchable documentation. Video tutorials for common tasks.",
+                            "Community Engagement: Actively manage and foster a developer forum.",
+                            "Onboarding & Training: Interactive tutorials within SDK, example projects, specialized webinars.",
+                            "Feedback Mechanisms: NPS surveys, in-app feedback tools, regular check-ins with Pro/Enterprise customers."
+                        ]
+                    }
+                },
+                metrics: {
+                    title: "Metrics & KPIs for NeuralQuantum.ai",
+                    intro: "Tracking the right metrics is crucial for gauging the success and growth of NeuralQuantum.ai. This section outlines the key performance indicators across acquisition, engagement, and monetization, along with an illustrative chart showing potential progress.",
+                    categories: [
+                        { name: "Overall Business (Shared)", kpis: ["Monthly Recurring Revenue (MRR) / Annual Recurring Revenue (ARR)", "Customer Lifetime Value (CLTV)", "Customer Acquisition Cost (CAC)", "Gross Margin", "Net Promoter Score (NPS) - Company-wide"] },
+                        { name: "Acquisition & Adoption", kpis: ["SDK Downloads", "API Key Registrations", "Research Partnership Agreements", "HuggingFace Model Interactions/Downloads"] },
+                        { name: "Engagement", kpis: ["Active SDK Users", "API Call Volume", "Number of Publications/Citations referencing NQ.ai tech"] },
+                        { name: "Monetization", kpis: ["Revenue from Pro SDK/Enterprise licenses", "API usage fees", "Custom Development Projects"] }
+                    ]
+                }
+            },
+            tunaas: {
+                name: "Tunaas.ai",
+                overview: {
+                    title: "Tunaas.ai: AI, Tuned for You",
+                    intro: "This section introduces Tunaas.ai, a platform dedicated to empowering individuals and businesses with customized AI assistants. Discover its vision and mission to make sophisticated AI accessible and practical for everyone.",
+                    tagline: "Empowering individuals and businesses with customized AI assistants.",
+                    vision: "To make sophisticated AI accessible and practical for everyone, enabling personalized and efficient digital experiences.",
+                    mission: "To offer a user-friendly Tuning-as-a-Service platform that allows professionals, creators, and SMBs to effortlessly create, customize, and deploy fine-tuned Large Language Models (LLMs) and agentic assistants tailored to their unique needs."
+                },
+                audience: {
+                    title: "Target Audience & Value Propositions for Tunaas.ai",
+                    intro: "Tunaas.ai serves a wide range of users, from solo professionals to enterprise teams, looking to leverage personalized AI. This section breaks down each target segment, their motivations, and the unique value Tunaas.ai delivers. Click on a segment to explore further.",
+                    segments: [
+                        { name: "Solo Professionals (Coaches, Therapists, Consultants, Lawyers)", needs: "Enhancing client services, automating routine tasks, scaling expertise.", value: "Instant fine-tuning for domain-specific copilots, 1-click hosting, personalized client interaction tools." },
+                        { name: "Creators & Online Educators", needs: "Engaging audiences, personalizing learning, content generation, community management.", value: "AI assistants for course delivery, Q&A, content repurposing, and community engagement, fully white-labeled." },
+                        { name: "Startups & SMBs", needs: "Affordable AI solutions, improving customer support, streamlining operations, rapid deployment.", value: "Cost-effective AI copilots, customizable internal assistants, seamless integration with existing workflows." },
+                        { name: "Enterprise Teams/Innovation Hubs", needs: "Exploring internal assistant customization, rapid prototyping of AI solutions, secure deployment.", value: "Agent Fine-Tuning Dashboard, prompt-based assistant generator, robust APIs for internal system integration, custom SLAs." }
+                    ],
+                    uvp: {
+                        title: "Unique Value Propositions (UVPs)",
+                        points: [
+                            "Effortless Expertise Encapsulation: Go from idea to deployed, personalized AI copilot in minutes, not months. Our 1-click fine-tuning and hosting democratizes expert-level AI.",
+                            "Your Brand, Your AI: Fully white-label agent creation, allowing professionals and businesses to extend their unique brand and value proposition through AI.",
+                            "Hyper-Personalization at Scale: Create truly bespoke AI assistants that understand specific domains, terminologies, and user needs, offering unparalleled personalization for any niche."
+                        ]
+                    }
+                },
+                products: {
+                    title: "Product Portfolio of Tunaas.ai",
+                    intro: "Tunaas.ai provides a comprehensive suite of tools for creating, deploying, and managing personalized AI assistants. Each product is designed for ease of use and powerful customization. Click on a product to learn more about its features.",
+                    items: [
+                        { name: "Agent Fine-Tuning Dashboard", description: "Intuitive no-code/low-code interface for customizing LLMs, defining agent personalities, skills, and knowledge bases." },
+                        { name: "Prompt-Based Assistant Generator", description: "Rapidly create functional AI assistants from simple prompts, with options for advanced configuration." },
+                        { name: "Marketplace of Pre-built Assistant Templates", description: "A curated collection of ready-to-deploy assistants for various professions and use cases (e.g., \"Therapy Copilot,\" \"Startup Pitch Coach\")." },
+                        { name: "Hosting & Deployment Subscriptions", description: "Scalable and secure hosting for created assistants, with one-click deployment to web, iMessage, mobile apps, and other platforms." },
+                        { name: "Agent Memory & Tools Integrations", description: "Persistent memory solutions for agents and seamless integration with external tools, APIs, and data sources (e.g., calendars, CRMs, knowledge bases)." }
+                    ]
+                },
+                launch: {
+                    title: "Phased Launch & Rollout Strategy for Tunaas.ai",
+                    intro: "The Tunaas.ai launch follows a strategic three-phase approach, designed to validate the product, build a community, and then scale commercially. This timeline outlines the key activities and goals for each phase. Click on a phase to view its specifics.",
+                    phases: [
+                        { name: "Phase 1: Foundation & Early Access (Months 0-2)", goal: "Validate core offerings, build initial community, gather critical feedback.", tunaas_activities: ["Complete Product-Market Fit validation for initial professional categories (e.g., coaching, consulting).", "Develop compelling messaging and positioning matrix for Tunaas.ai Studio.", "Launch polished landing page with a waitlist for Tunaas.ai Studio (Beta).", "Onboard first cohort of 20-30 beta testers for Tunaas.ai Studio; provide high-touch support.", "Create pre-launch teaser campaigns on LinkedIn and Twitter/X showcasing potential use cases."], kpis: "Waitlist sign-ups, beta user engagement, feedback quality." },
+                        { name: "Phase 2: Public Beta & Community Building (Months 2-5)", goal: "Expand user base, refine products based on feedback, secure early testimonials.", tunaas_activities: ["Public Beta launch of Tunaas.ai Studio v1 with 3-5 initial assistant categories.", "Collect and showcase testimonials and case studies from successful beta users.", "Run targeted outreach to influencers and community leaders in initial professional niches.", "Host webinars demonstrating \"Build Your First AI Assistant in 30 Minutes.\""], kpis: "Active beta users, webinar attendance, testimonial acquisition." },
+                        { name: "Phase 3: Commercial Launch & Scaling (Months 5-12)", goal: "Drive revenue, expand market reach, establish strategic partnerships.", tunaas_activities: ["Official launch of Tunaas.ai with Free, Pro, and Studio Max pricing tiers.", "Expand AI agent marketplace with 10+ categories and user-submitted templates.", "Secure integration partnerships (e.g., Zoho, Notion, Webflow, Zapier).", "Launch affiliate program for creators and influencers.", "Develop and launch inbound marketing campaigns (SEO-optimized content, targeted ads)."], kpis: "MRR/ARR, paying customers, partnership agreements, marketplace growth, CAC." }
+                    ]
+                },
+                pricing: {
+                    title: "Pricing Strategy for Tunaas.ai - AI For You",
+                    intro: "Tunaas.ai offers a range of pricing tiers designed to meet the needs of different users, from individuals exploring AI to larger businesses requiring custom solutions. Each tier provides a distinct set of features to help you build and deploy your personalized AI assistants. Hover over a card to see its details.",
+                    tiers: [
+                        { name: "Free", features: "Limited basic agent creation (1-2 agents), access to community templates, standard support.", target: "Individuals exploring", price: "$0/month", color: "bg-slate-50" },
+                        { name: "Pro", features: "1 Fine-tuned custom assistant, 1-click deployment, advanced analytics, priority email support, access to premium templates.", target: "Solo Professionals", price: "$49/month", color: "bg-sky-50" },
+                        { name: "Studio Max", features: "Up to 5 fine-tuned assistants, full white-labeling, team collaboration features, API access, dedicated support.", target: "Creators, SMBs", price: "$129/month", color: "bg-indigo-50" },
+                        { name: "Enterprise", features: "Custom number of agents, bespoke model fine-tuning, SSO, dedicated infrastructure, premium SLAs, custom integrations.", target: "Larger Businesses", price: "Custom Quote", color: "bg-purple-50" }
+                    ]
+                },
+                strategy: {
+                    title: "Strategy Ecosystem for Tunaas.ai",
+                    intro: "This section details the comprehensive strategic framework for Tunaas.ai, encompassing distribution, sales, partnerships, marketing, and customer support. These elements work in concert to drive adoption, build a vibrant community, and establish Tunaas.ai as a leader in personalized AI solutions.",
+                    distributionSales: {
+                        title: "Distribution & Sales Strategy",
+                        channels: [
+                            { name: "Direct Sales & BD", strategy: "Target SMBs and enterprise teams for \"Studio Max\" and custom enterprise tiers. Build an outbound sales process for larger accounts." },
+                            { name: "Hugging Face", strategy: "Launch \"Lite\" versions of popular assistant templates, drive traffic to Tunaas.ai Studio, use badges to promote." },
+                            { name: "Developer Platforms (GitHub, PyPI, NPM)", strategy: "Offer developer APIs for advanced customization and integration of Tunaas-built agents into third-party applications." },
+                            { name: "Cloud Marketplaces (AWS, Azure, GCP - Future)", strategy: "Offer Tunaas.ai as a managed service or integrated app for businesses already on these platforms." },
+                            { name: "Integration Partners (e.g., Zoho, Notion, Webflow, Slack)", strategy: "Build plugins/embeds to seamlessly integrate Tunaas agents into existing professional workflows, accessing their user bases." },
+                            { name: "Content & Community", strategy: "Create tutorials, case studies, \"how-to\" guides. Foster a community forum (e.g., Discord) for users to share tips and templates." },
+                            { name: "Influencer & Affiliates", strategy: "Partner with YouTubers, LinkedIn creators, and industry bloggers to review and promote Tunaas.ai Studio and specific assistant use cases." }
+                        ]
+                    },
+                    partnerships: {
+                        title: "Strategic Partnerships Ecosystem",
+                        categories: [
+                             { name: "Software & Platform Integrations", examples: "Zoho, Notion, Webflow, Slack (for direct user workflow integration); LangChain, LlamaIndex (for agent frameworks); Hugging Face (community, template distribution); OpenAI, Cohere, Anthropic (base model fine-tuning); Zapier, Make (automation).", goals: "Expand reach, enhance functionality, streamline user experience, provide access to broader user bases." },
+                             { name: "Venture Capital & Incubators", examples: "Y Combinator (vertical focus), Alchemist Accelerator (enterprise AI), accelerators focused on creator economy or SMB tools.", goals: "Funding, mentorship, strategic network access, market validation." },
+                             { name: "Affiliate & Reseller Partners", examples: "Marketing agencies, business consultants, popular bloggers/influencers in target niches.", goals: "Drive sales, increase market penetration, leverage trusted voices."}
+                        ]
+                    },
+                    marketing: {
+                        title: "Marketing & Communications Plan",
+                        channels: [
+                            { name: "LinkedIn", focus: "\"Transform Your Workflow\" case studies, user success stories, tutorials on building specific agents, targeting professional groups." },
+                            { name: "Twitter/X", focus: "Quick tips, new feature announcements, community highlights, contests (#MyTunaasAgent), engaging with creator/solopreneur communities." },
+                            { name: "YouTube", focus: "Tunaas.ai Studio walkthroughs, \"Build an Agent in 5 Minutes\" tutorials, user testimonials, \"Day in the Life with My AI Assistant.\"" },
+                            { name: "Product Hunt", focus: "Launch Tunaas.ai Studio, and potentially popular pre-built agent templates like \"CodeCrafter\" or \"FluentQ\" as standalone products." },
+                            { name: "Technical Blogs & Medium", focus: "Practical guides: \"10 Ways an AI Coach Can Boost Your Practice,\" \"Automating Client Onboarding with Tunaas.ai,\" \"White-Labeling Your Expertise.\"" },
+                            { name: "Email Marketing", focus: "Onboarding sequences, weekly tips & tricks, new template announcements, case study highlights, promotional offers for Pro/Studio Max." },
+                            { name: "Public Relations", focus: "Target business and entrepreneurship media, podcasts focusing on productivity and solo businesses, guest posts on relevant blogs." }
+                        ]
+                    },
+                    support: {
+                        title: "Customer Support & Success Strategy",
+                        points: [
+                            "Tiered Support: AI Agent Concierge (built on Tunaas!) for basic queries, community forum (Discord/Circle.so), email support for Pro, dedicated account managers for Studio Max/Enterprise.",
+                            "Documentation & Knowledge Base: Comprehensive, well-organized, and easily searchable documentation. Video tutorials for common tasks.",
+                            "Community Engagement: Actively manage and foster a creator/user community to share templates, best practices, and use cases.",
+                            "Onboarding & Training: Guided onboarding flows within the platform, Zapier/Make.com automations for integrating new users, monthly \"Office Hours\" & live Q&A sessions.",
+                            "Feedback Mechanisms: NPS surveys, in-app feedback tools, regular check-ins with Pro/Enterprise customers."
+                        ]
+                    }
+                },
+                metrics: {
+                    title: "Metrics & KPIs for Tunaas.ai",
+                    intro: "To measure the effectiveness of the Tunaas.ai GTM strategy, specific Key Performance Indicators will be tracked across user acquisition, engagement, retention, and monetization. An illustrative chart below shows how such progress might be visualized.",
+                    categories: [
+                        { name: "Overall Business (Shared)", kpis: ["Monthly Recurring Revenue (MRR) / Annual Recurring Revenue (ARR)", "Customer Lifetime Value (CLTV)", "Customer Acquisition Cost (CAC)", "Gross Margin", "Net Promoter Score (NPS) - Company-wide"] },
+                        { name: "Acquisition & Adoption", kpis: ["Website Traffic", "Waitlist Sign-ups (pre-launch)", "Free Trial Sign-ups", "Conversion Rate (Free to Paid)"] },
+                        { name: "Engagement", kpis: ["Daily/Monthly Active Users (DAU/MAU)", "Number of Assistants Built/Deployed", "Average Time on Platform", "Feature Adoption Rate (e.g., marketplace usage, tool integrations)"] },
+                        { name: "Retention", kpis: ["Churn Rate (Monthly/Annual)", "Renewal Rate for subscriptions"] },
+                        { name: "Monetization", kpis: ["MRR from subscriptions", "Average Revenue Per User (ARPU)"] }
+                    ]
+                }
+            }
+        };
+
+        let currentCompany = 'nqai';
+        let currentSection = 'overview';
+        let kpiChart = null;
+
+        const mainContent = document.getElementById('mainContent');
+        const companySwitcher = document.getElementById('companySwitcher');
+        const sidebarNav = document.getElementById('sidebarNav');
+
+        function renderContent() {
+            const companyData = data[currentCompany];
+            const sectionData = companyData[currentSection];
+            let html = `<div class="bg-white p-6 rounded-lg shadow space-y-6">`;
+            html += `<h2 class="text-3xl font-bold text-teal-700 mb-3">${sectionData.title}</h2>`;
+            if(sectionData.intro) {
+                html += `<p class="text-stone-700 text-lg mb-6">${sectionData.intro}</p>`;
+            }
+
+            if (currentSection === 'overview') {
+                html += `<p class="text-xl font-semibold text-teal-600">${sectionData.tagline}</p>`;
+                html += `<div class="mt-4 space-y-3">
+                            <div><h3 class="text-lg font-semibold text-stone-700">Vision:</h3><p class="text-stone-600">${sectionData.vision}</p></div>
+                            <div><h3 class="text-lg font-semibold text-stone-700">Mission:</h3><p class="text-stone-600">${sectionData.mission}</p></div>
+                         </div>`;
+            } else if (currentSection === 'audience') {
+                html += `<div class="grid md:grid-cols-2 gap-6 mb-8">`;
+                sectionData.segments.forEach(segment => {
+                    html += `<div class="bg-stone-50 p-4 rounded-lg shadow hover:shadow-lg transition-shadow duration-300 cursor-pointer" onclick="this.querySelector('.details-card').classList.toggle('open')">
+                                <h3 class="text-xl font-semibold text-teal-600 mb-2">${segment.name}</h3>
+                                <div class="details-card">
+                                    <p class="text-sm text-stone-600 mb-1"><strong class="font-medium text-stone-700">Key Needs:</strong> ${segment.needs}</p>
+                                    <p class="text-sm text-stone-600"><strong class="font-medium text-stone-700">Core Value:</strong> ${segment.value}</p>
+                                </div>
+                             </div>`;
+                });
+                html += `</div>`;
+                html += `<h3 class="text-2xl font-semibold text-teal-700 mt-8 mb-3">${sectionData.uvp.title}</h3>`;
+                html += `<ul class="list-disc list-inside space-y-2 text-stone-700">`;
+                sectionData.uvp.points.forEach(point => {
+                    html += `<li>${point}</li>`;
+                });
+                html += `</ul>`;
+            } else if (currentSection === 'products') {
+                html += `<div class="space-y-4">`;
+                sectionData.items.forEach(item => {
+                    html += `<div class="bg-stone-50 p-4 rounded-lg shadow cursor-pointer product-item" onclick="this.querySelector('.details-card').classList.toggle('open')">
+                                <h3 class="text-xl font-semibold text-teal-600">${item.name}</h3>
+                                <div class="details-card mt-2">
+                                 <p class="text-stone-600">${item.description}</p>
+                                </div>
+                             </div>`;
+                });
+                html += `</div>`;
+            } else if (currentSection === 'launch') {
+                html += `<div class="flex flex-col space-y-8 md:space-y-0 md:flex-row md:space-x-4 overflow-x-auto pb-4 mb-6">`;
+                sectionData.phases.forEach((phase, index) => {
+                    html += `<div class="launch-phase flex-1 bg-stone-50 p-4 rounded-lg shadow border border-transparent min-w-[280px]" data-phase-index="${index}">
+                                <h3 class="text-lg font-semibold text-teal-600 mb-1">${phase.name}</h3>
+                                <p class="text-sm text-stone-500 italic mb-2">Goal: ${phase.goal}</p>
+                                <button class="text-sm text-teal-500 hover:text-teal-700 font-medium">View Details</button>
+                             </div>`;
+                });
+                html += `</div>`;
+                html += `<div id="launchPhaseDetails" class="mt-6 bg-white p-6 rounded-lg shadow-inner">
+                            <p class="text-stone-500 italic">Click on a phase above to see its details.</p>
+                         </div>`;
+            } else if (currentSection === 'pricing') {
+                if (currentCompany === 'tunaas') {
+                    html += `<div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">`;
+                    sectionData.tiers.forEach(tier => {
+                        html += `<div class="pricing-card ${tier.color} p-6 rounded-lg shadow text-center flex flex-col justify-between">
+                                    <div>
+                                        <h3 class="text-2xl font-bold text-teal-700 mb-2">${tier.name}</h3>
+                                        <p class="text-stone-600 text-sm mb-1 h-16">${tier.features}</p>
+                                        <p class="text-xs text-stone-500 italic mb-4">Target: ${tier.target}</p>
+                                    </div>
+                                    <p class="text-3xl font-extrabold text-teal-600 my-4">${tier.price}</p>
+                                    <button class="w-full bg-teal-600 text-white py-2 px-4 rounded-md hover:bg-teal-700 transition duration-300 mt-auto">Choose Plan</button>
+                                 </div>`;
+                    });
+                    html += `</div>`;
+                } else { // nqai
+                    html += `<div class="overflow-x-auto"><table class="min-w-full bg-white border border-stone-200">
+                                <thead class="bg-stone-50">
+                                    <tr>
+                                        <th class="px-6 py-3 border-b-2 border-stone-200 text-left text-xs font-semibold text-stone-600 uppercase tracking-wider">Service/Product</th>
+                                        <th class="px-6 py-3 border-b-2 border-stone-200 text-left text-xs font-semibold text-stone-600 uppercase tracking-wider">Description & Features</th>
+                                        <th class="px-6 py-3 border-b-2 border-stone-200 text-left text-xs font-semibold text-stone-600 uppercase tracking-wider">Pricing Model</th>
+                                        <th class="px-6 py-3 border-b-2 border-stone-200 text-left text-xs font-semibold text-stone-600 uppercase tracking-wider">Indicative Price</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="text-stone-700">`;
+                    sectionData.tiers.forEach(tier => {
+                        html += `<tr>
+                                    <td class="px-6 py-4 whitespace-nowrap border-b border-stone-200 font-medium">${tier.service}</td>
+                                    <td class="px-6 py-4 border-b border-stone-200 table-cell-truncate text-sm">${tier.features}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap border-b border-stone-200 text-sm">${tier.model}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap border-b border-stone-200 text-sm">${tier.price}</td>
+                                 </tr>`;
+                    });
+                    html += `</tbody></table></div>`;
+                }
+            } else if (currentSection === 'strategy') {
+                html += `<div class="space-y-8">`;
+                // Distribution & Sales
+                html += `<div><h3 class="text-2xl font-semibold text-teal-700 mb-3">${sectionData.distributionSales.title}</h3><div class="space-y-3">`;
+                sectionData.distributionSales.channels.forEach(channel => {
+                    html += `<div class="bg-stone-50 p-3 rounded-md"><p><strong class="font-medium text-teal-600">${channel.name}:</strong> ${channel.strategy}</p></div>`;
+                });
+                html += `</div></div>`;
+                // Partnerships
+                html += `<div><h3 class="text-2xl font-semibold text-teal-700 mb-3">${sectionData.partnerships.title}</h3><div class="space-y-3">`;
+                sectionData.partnerships.categories.forEach(cat => {
+                    html += `<div class="bg-stone-50 p-3 rounded-md">
+                                <p><strong class="font-medium text-teal-600">${cat.name}:</strong> ${cat.examples}</p>
+                                <p class="text-sm text-stone-500 italic">Goals: ${cat.goals}</p>
+                             </div>`;
+                });
+                html += `</div></div>`;
+                // Marketing
+                html += `<div><h3 class="text-2xl font-semibold text-teal-700 mb-3">${sectionData.marketing.title}</h3><div class="space-y-3">`;
+                sectionData.marketing.channels.forEach(channel => {
+                    html += `<div class="bg-stone-50 p-3 rounded-md"><p><strong class="font-medium text-teal-600">${channel.name}:</strong> ${channel.focus}</p></div>`;
+                });
+                html += `</div></div>`;
+                // Support
+                html += `<div><h3 class="text-2xl font-semibold text-teal-700 mb-3">${sectionData.support.title}</h3><ul class="list-disc list-inside space-y-2 text-stone-700 pl-2">`;
+                sectionData.support.points.forEach(point => {
+                    html += `<li>${point}</li>`;
+                });
+                html += `</ul></div>`;
+                html += `</div>`;
+            } else if (currentSection === 'metrics') {
+                sectionData.categories.forEach(cat => {
+                    html += `<div class="mb-6"><h3 class="text-xl font-semibold text-teal-600 mb-2">${cat.name}</h3><ul class="list-disc list-inside space-y-1 text-stone-700 pl-2">`;
+                    cat.kpis.forEach(kpi => {
+                        html += `<li>${kpi}</li>`;
+                    });
+                    html += `</ul></div>`;
+                });
+                html += `<div class="mt-8"><h3 class="text-xl font-semibold text-teal-600 mb-4">Illustrative KPI Progress</h3>
+                         <div class="chart-container bg-white p-4 rounded-lg shadow">
+                            <canvas id="kpiChart"></canvas>
+                         </div>
+                         <p class="text-sm text-stone-500 italic mt-2 text-center">Note: This chart uses sample data for illustrative purposes only.</p>
+                         </div>`;
+            }
+
+            html += `</div>`;
+            mainContent.innerHTML = html;
+
+            if (currentSection === 'metrics') {
+                renderKpiChart();
+            }
+            if (currentSection === 'launch') {
+                addLaunchPhaseListeners();
+                // Display details for the first phase by default
+                displayLaunchPhaseDetails(0);
+                 document.querySelector(`.launch-phase[data-phase-index="0"]`)?.classList.add('active-phase');
+            }
+        }
+        
+        function renderKpiChart() {
+            const ctx = document.getElementById('kpiChart')?.getContext('2d');
+            if (!ctx) return;
+
+            if (kpiChart) {
+                kpiChart.destroy();
+            }
+
+            const labels = ['Q1 Active Users', 'Q1 SDK Downloads', 'Q1 Revenue (k)', 'Q1 Conversion %'];
+            const chartData = currentCompany === 'nqai' ? [150, 500, 20, 5] : [2000, 150, 30, 8];
+
+            Chart.defaults.font.family = "'Inter', sans-serif";
+            kpiChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: `${data[currentCompany].name} - Sample KPI Progress`,
+                        data: chartData,
+                        backgroundColor: [
+                            'rgba(13, 148, 136, 0.6)', // teal-600
+                            'rgba(59, 130, 246, 0.6)', // blue-500
+                            'rgba(234, 179, 8, 0.6)',  // yellow-500
+                            'rgba(139, 92, 246, 0.6)'  // violet-500
+                        ],
+                        borderColor: [
+                            'rgba(13, 148, 136, 1)',
+                            'rgba(59, 130, 246, 1)',
+                            'rgba(234, 179, 8, 1)',
+                            'rgba(139, 92, 246, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { color: '#374151' } // stone-700
+                        },
+                        x: {
+                            ticks: { 
+                                color: '#374151', // stone-700
+                                callback: function(value, index, values) { // Wrap long labels
+                                    const label = this.getLabelForValue(value);
+                                    if (label.length > 16) {
+                                        return label.match(/.{1,16}/g); // Split into lines of 16 chars
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: { color: '#1f2937' } // stone-800
+                        },
+                        tooltip: {
+                            enabled: true,
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            titleFont: { size: 14 },
+                            bodyFont: { size: 12 },
+                            callbacks: {
+                                label: function(context) { // For better tooltip display
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += context.parsed.y;
+                                        if (context.label.includes('%')) label += '%';
+                                        if (context.label.includes('(k)')) label += 'k';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function addLaunchPhaseListeners() {
+            const phaseElements = document.querySelectorAll('.launch-phase');
+            phaseElements.forEach(el => {
+                el.addEventListener('click', () => {
+                    const phaseIndex = parseInt(el.dataset.phaseIndex);
+                    displayLaunchPhaseDetails(phaseIndex);
+                    phaseElements.forEach(p => p.classList.remove('active-phase'));
+                    el.classList.add('active-phase');
+                });
+            });
+        }
+
+        function displayLaunchPhaseDetails(index) {
+            const detailsContainer = document.getElementById('launchPhaseDetails');
+            if (!detailsContainer) return;
+            
+            const companyData = data[currentCompany];
+            const phase = companyData.launch.phases[index];
+            let detailsHtml = `<h4 class="text-xl font-semibold text-teal-700 mb-3">${phase.name}</h4>`;
+            detailsHtml += `<p class="text-stone-600 mb-2"><strong class="font-medium">Goal:</strong> ${phase.goal}</p>`;
+            
+            const activities = currentCompany === 'nqai' ? phase.nq_activities : phase.tunaas_activities;
+            if (activities && activities.length > 0) {
+                detailsHtml += `<strong class="font-medium text-stone-700">Key Activities for ${companyData.name}:</strong><ul class="list-disc list-inside text-stone-600 space-y-1 mt-1 mb-3 pl-2">`;
+                activities.forEach(activity => {
+                    detailsHtml += `<li>${activity}</li>`;
+                });
+                detailsHtml += `</ul>`;
+            }
+            
+            detailsHtml += `<strong class="font-medium text-stone-700">Key KPIs for this phase:</strong><p class="text-stone-600 mt-1">${phase.kpis}</p>`;
+            detailsContainer.innerHTML = detailsHtml;
+        }
+
+        companySwitcher.addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON') {
+                currentCompany = e.target.dataset.company;
+                document.querySelectorAll('.company-btn').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                currentSection = 'overview'; // Reset to overview on company switch
+                updateSidebarNav();
+                renderContent();
+            }
+        });
+
+        sidebarNav.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (e.target.tagName === 'A') {
+                currentSection = e.target.dataset.section;
+                updateSidebarNav();
+                renderContent();
+                 window.scrollTo({ top: mainContent.offsetTop - 80, behavior: 'smooth' }); // Scroll to section, accounting for sticky header
+            }
+        });
+        
+        function updateSidebarNav() {
+            document.querySelectorAll('.sidebar-link').forEach(link => {
+                link.classList.remove('active');
+                if (link.dataset.section === currentSection) {
+                    link.classList.add('active');
+                }
+            });
+        }
+
+        // Initial render
+        renderContent();
+
+    </script>
+</body>
+</html>
+
